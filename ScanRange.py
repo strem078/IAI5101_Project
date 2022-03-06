@@ -1,0 +1,10 @@
+"""@package ScanRange
+This code is made to be run on a Raspberry Pi 4.
+
+This code sweeps the range of inputs to an electronic cavity in a optical circuit. The ultimate goal of this code is to obtain mode locking in a small and affordable form factor.
+
+The effect of sweeping these values is captured at the output of the circuit, where 90% (in the experimental circuit) of the light in the circuit is split into an x- and a y-polarized output, read by photosensors (px and py) and logged into a CSV file along with the output voltages that lead to the state of the circuit.
+"""
+
+# This code was written for use on a Raspberry Pi 4
+import keras

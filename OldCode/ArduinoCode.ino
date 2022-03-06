@@ -27,7 +27,6 @@ void setup() {
   pinMode(9, OUTPUT);
   pinMode(6, OUTPUT);
   Serial.begin(9600);        //start the serial port to talk to the computer
-  
 
 }
 
@@ -82,11 +81,6 @@ void loop() {
       Serial.print(", ");
       Serial.println(ref[j]);
       
-
-      //if  ( ref[j] <= -30 && ref[j] >=-65)
-      // { while(1);
-      //
-      // }
       outputVoltage2=j;
       outputVoltage1=i;
     }
