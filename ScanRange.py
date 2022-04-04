@@ -49,6 +49,7 @@ bus = get_smbus()
 # Set the ADC channels
 ADC_Px_in = MCP342x(bus, 0x68, channel=0, resolution=14, gain=1)
 ADC_Py_in = MCP342x(bus, 0x68, channel=1, resolution=14, gain=1)
+adcs = [ADC_Px_in, ADC_Py_in]
 
 # Create PWM Pin objects
 pwm_pins = []
@@ -78,12 +79,32 @@ data = pd.DataFrame()
 
 print("\nPress Ctl C to quit \n")  # Print blank line before and after message.
 
+# Functino to get the power readings from the cavity
+def read_powers(tolerance, samples, max_conversions=0):
+  i=0
+  while i < max_conversions and max_conversions != 0:
+    p_x, p_y = MCP342x.convert_and_read_many(adcs, samples=samples)
+    if (np.min(p_x) - np.max(p_x))/np.average(p_x) < tolerance and (np.min(p_y) - np.max(p_y))/np.average(p_y) < tolerance:
+      return [np.average(p_x), np.average(p_x)]
+    i = i+1
+  
+  return np.nan() # If we reached max conversions with no success
+
+
 try:
+  flags = []
+  for i in pin_table[pin_table['Enable'] == True].index:
+    flags.append(pin_table['V_min'][i])
+
   for i in pin_table[pin_table['Enable'] == True].index:
     for voltage in np.arange(pin_table['V_min'][i], pin_table['V_max'][i], (pin_table['V_max'][i]-pin_table['V_min'][i])/steps):
       print(voltage/5.0*3.3)
       pin_table['Pins'][i].setV_out(voltage)
-      time.sleep(10)
+      # Read the ADC input
+      p_x, p_y = read_powers(0.05, 10, 100)
+      print(p_x, ", ", p_y)
+
+
     
 except KeyboardInterrupt:
   print("Ctl C pressed - ending program")
