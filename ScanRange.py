@@ -13,9 +13,10 @@ import os.path as pth
 import numpy as np
 import json
 import PWM_Pin_Lib as PWMPin
+import time
 
 data_csv = "./Data/data.csv"
-stepSize = 1 # percentage step in given range
+steps = 10 # steps to take in range
 
 # Set the pin addressing in the code to the pin numbers on the board
 GPIO.setmode(GPIO.BOARD)
@@ -26,45 +27,35 @@ for pin in [12, 32, 33, 35]:
   pwm_pins.append(PWMPin.PWM_Pin(pin))
   pwm_pins[-1].setCavityPin(len(pwm_pins))
 
-pin_table=pd.DataFrame({'Pins_Cavity' : [1,2,3,4], 'Pins_BOARD' : pwm_pins, 'Enable' : [True, True, False, False]})
+pin_table=pd.DataFrame({'Pins' : pwm_pins, 'Enable' : [True, False, False, False]})
 print(pin_table)
 
 # load old CSV file if it exists
 if pth.exists(data_csv): pd.read_csv(data_csv)
 
+pin_table['V_min'] = 0.0
+pin_table['V_max'] = 0.0
+
 for i in pin_table.index:
     if pin_table['Enable'][i]:
-      pinNo = pin_table['Pins_BOARD'][i]
+      pinNo = pin_table['Pins'][i]
       pin_table['V_min'][i] = 0.0
       pin_table['V_max'][i] = 5.0
-    else:                          # Disabled pins have 0 to 0 as range
-      pin_table['V_min'][i] = 0.0
-      pin_table['V_max'][i] = 0.0
 
-# Define a sweeping function that sweeps the range of each pin
-def sweep(pinNo, range):
+print(pin_table)
 
-
-# Run the test by sweeping each pin recursively
+# Run the test by sweeping each enabled pin
 data = pd.DataFrame()
 
-try:
-  for i in pin_table[pin_table.Enable].index: # Run through enabled pins
-    data['Voltage_' + str(i+1)] = range(pin_table['V_min'][i], range(pin_table['V_max'][i]), stepSize*(pin_table['V_min'][i]-pin_table['V_max'][i])/100)
-except KeyboardInterrupt:
-  print("Ctl C pressed - ending program")
-
-# Sweeping loop in program
 print("\nPress Ctl C to quit \n")  # Print blank line before and after message.
 
-  while True:                      # Loop until Ctl C is pressed to stop.
-    for dc_1 in range(0, 101, 5):  # Loop 0 to 100 (0 to 3v3) stepping dc by 5 (165mV) each loop
-      
-      time.sleep(0.05)             # wait .05 seconds at current LED brightness
-      print(dc)
-
+try:
+  for i in pin_table[pin_table['Enable'] == True].index:
+    for voltage in np.arange(pin_table['V_min'][i], pin_table['V_max'][i], (pin_table['V_max'][i]-pin_table['V_min'][i])/steps):
+      print(voltage/5.0*3.3)
+      pin_table['Pins'][i].setV_out(voltage)
+      time.sleep(10)
+    
 except KeyboardInterrupt:
-  
-
-pwm.stop()                         # stop PWM
-GPIO.cleanup()                     # resets GPIO ports used back to input mode
+  print("Ctl C pressed - ending program")
+  GPIO.cleanup()

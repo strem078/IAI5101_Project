@@ -9,19 +9,32 @@ import RPi.GPIO as GPIO
 
 class PWM_Pin:
 
+    # setBoardPin sets the pin number (following BOARD pin number GPIO schema) for PWM
     def setBoardPin(self, pinNo): self.pinNumber_BOARD = pinNo
+    # setCavityPin sets the cavity pin number which is connected to the PWM pin
     def setCavityPin(self, pinNo): self.pinNumber_Cavity = pinNo
+    # getBoardPin gets the BOARD pin number for the PWM pin
     def getBoardPin(self): return self.pinNumber_BOARD
+    # getCavityPin gets the cavity pin for a given PWM pin
     def getCavityPin(self): return self.pinNumber_Cavity
-    def setDutyCycle(self): self.pwm.changeDutyCycle(self.voltage_rPI/3.3)
+    # setDutyCycle sets the duty cycle for a desired voltage output at the cavity
+    def setV_out(self, voltage):
+        newDuty = voltage/5.0 * 100.0
+        self.pwm.ChangeDutyCycle(newDuty)
+        self.voltage_cavity = voltage
+        self.voltage_rPI = voltage/5.0 * 3.3
+        print("Duty cycle is now: ", newDuty)
     
-    def __init__(self, pinBoard=np.NaN(), pinCavity=np.NaN(), dutyCycle=0, voltage_rPI=0, PWM_Freq=100):
+    def __init__(self, pinBoard, pinCavity=0, voltage_rPI=0, PWM_Freq=200):
+        GPIO.setmode(GPIO.BOARD)
         self.pinNumber_BOARD = pinBoard
         self.pinNumber_Cavity = pinCavity
-        GPIO.setup(pinBoard, GPIO.OUT)      # Set GPIO PWM pins to output mode.
-        self.pwm = GPIO.PWM(pinBoard, PWM_Freq)  # Initialize PWM on pin, 100Hz frequency
+        GPIO.setup(pinBoard, GPIO.OUT)           # Set GPIO PWM pins to output mode.
+        self.pwm = GPIO.PWM(pinBoard, PWM_Freq)  # Initialize PWM on pin, 8kHz frequency
         self.voltage_rPI = voltage_rPI
-        self.voltage_cavity = voltage_rPI * 5.0/3.3
-        self.dutyCycle = setDutyCycle(self)
-        self.maxVoltage = 3.3
-        self.pwm.start(voltage_rPI/3.3*100.0)    # Start PWM with the required duty cycle to obtain the desired voltages
+        self.voltage_cavity = voltage_rPI/3.3 * 5.0
+        self.pwm.start(0)    # Start PWM with the required duty cycle to obtain the desired voltages
+        self.setV_out(self.voltage_cavity)
+
+    def __del__(self):
+        self.pwm.stop() # stop PWM
