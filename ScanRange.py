@@ -13,6 +13,7 @@ import os.path as pth
 import numpy as np
 import PWM_Pin_Lib as PWMPin
 import time
+import datetime
 
 # The ADC code was written by Steve Marple and is 
 # used under the MIT Licence
@@ -22,9 +23,6 @@ from MCP342x import MCP342x
 
 data_csv = "./Data/data.csv"
 steps = 10 # steps to take in range
-
-# Set the pin addressing in the code to the pin numbers on the board
-GPIO.setmode(GPIO.BOARD)
 
 # Set the ADC up
 def get_smbus():
@@ -75,37 +73,56 @@ for i in pin_table.index:
 print(pin_table)
 
 # Run the test by sweeping each enabled pin
-data = pd.DataFrame()
+data = pd.DataFrame({'Voltage_0':[], 'Voltage_1':[],'Voltage_2':[],'Voltage_3':[],'P_x':[],'P_y':[],'S1':[]})
 
 print("\nPress Ctl C to quit \n")  # Print blank line before and after message.
 
 # Functino to get the power readings from the cavity
-def read_powers(tolerance, samples, max_conversions=0):
-  i=0
+def read_powers(tolerance, samples, max_conversions=0, delay=0):
+  i=0 # Conversions counter
   while i < max_conversions and max_conversions != 0:
+    time.sleep(delay)
     p_x, p_y = MCP342x.convert_and_read_many(adcs, samples=samples)
-    if (np.min(p_x) - np.max(p_x))/np.average(p_x) < tolerance and (np.min(p_y) - np.max(p_y))/np.average(p_y) < tolerance:
+    if np.abs(np.max(p_x) - np.min(p_x)) < 2.0*tolerance and np.abs(np.max(p_y) - np.min(p_y)) < 2.0*tolerance:
       return [np.average(p_x), np.average(p_x)]
     i = i+1
   
   return np.nan() # If we reached max conversions with no success
 
+def add_data(p_x, p_y):
+  V_0 = pin_table['Pins'][0].getCavityVoltage()
+  V_1 = pin_table['Pins'][1].getCavityVoltage()
+  V_2 = pin_table['Pins'][2].getCavityVoltage()
+  V_3 = pin_table['Pins'][3].getCavityVoltage()
+  S1 = (p_x-p_y)/(p_x+p_y)
+  row = {'Voltage_0':[V_0], 'Voltage_1':[V_1],'Voltage_2':[V_2],'Voltage_3':[V_3],'P_x':[p_x],'P_y':[p_y],'S1':[S1]}
+  newRow = pd.DataFrame(row)
+  return newRow
+
+def increment_voltage(onPins, ptr):
+  V_max = pin_table['V_max'][onPins[ptr]]
+  V_min = pin_table['V_min'][onPins[ptr]]
+  currPin = pin_table['Pins'][onPins[ptr]]
+  if currPin.getCavityVoltage() >= V_max:
+    if ptr == 0: # Sweep end condition
+      return np.nan()
+    else:
+      increment_voltage(onPins, ptr-1)
+      currPin.setV_out()
+  else:
+    currPin.incrementV_out((V_max-V_min)/steps)
 
 try:
-  flags = []
-  for i in pin_table[pin_table['Enable'] == True].index:
-    flags.append(pin_table['V_min'][i])
+  onPins = pin_table[pin_table['Enable']].index
+  ptr = len(onPins)
+  while True:
+    pin_table['Pins'][ptr].setV_out(1)
+    # Read the ADC input
+    p_x, p_y = read_powers(0.01, 20, 100)
+    data = pd.concat([data, add_data(p_x, p_y)])
+    break
 
-  for i in pin_table[pin_table['Enable'] == True].index:
-    for voltage in np.arange(pin_table['V_min'][i], pin_table['V_max'][i], (pin_table['V_max'][i]-pin_table['V_min'][i])/steps):
-      print(voltage/5.0*3.3)
-      pin_table['Pins'][i].setV_out(voltage)
-      # Read the ADC input
-      p_x, p_y = read_powers(0.05, 10, 100)
-      print(p_x, ", ", p_y)
+  data.to_csv('./Data/CavityData_' + datetime.now() + '.csv')
 
-
-    
 except KeyboardInterrupt:
   print("Ctl C pressed - ending program")
-  GPIO.cleanup()
