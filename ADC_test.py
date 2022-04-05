@@ -38,20 +38,13 @@ logger = logging.getLogger(__name__)
 bus = get_smbus()
 
 # Create objects for each signal to be sampled
-addr68_ch0 = MCP342x(bus, 0x68, channel=0, resolution=18)
-addr68_ch1 = MCP342x(bus, 0x68, channel=1, resolution=18)
-addr68_ch2 = MCP342x(bus, 0x68, channel=2, resolution=18)
-addr68_ch3 = MCP342x(bus, 0x68, channel=3, resolution=16)
+addr68_ch0 = MCP342x(bus, 0x68, channel=0, resolution=14, gain=1)
+addr68_ch1 = MCP342x(bus, 0x68, channel=1, resolution=14, gain=1)
 
 # Create a list of all the objects. They will be sampled in this
 # order, unless any later objects can be sampled can be moved earlier
 # for simultaneous sampling.
-adcs = [addr68_ch0, addr68_ch1, addr68_ch2, addr68_ch3]
-r = MCP342x.convert_and_read_many(adcs, samples=2)
+adcs = [addr68_ch0, addr68_ch1]
+r = MCP342x.convert_and_read_many(adcs, samples=3)
 print('return values: ')
 print(r)
-
-
-# , scale_factor=2.448579823702253
-addr68_ch0.convert()
-print(addr68_ch3.convert_and_read())

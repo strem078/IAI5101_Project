@@ -11,15 +11,44 @@ import RPi.GPIO as GPIO
 import pandas as pd
 import os.path as pth
 import numpy as np
-import json
 import PWM_Pin_Lib as PWMPin
 import time
+
+# The ADC code was written by Steve Marple and is 
+# used under the MIT Licence
+import glob
+import smbus
+from MCP342x import MCP342x
 
 data_csv = "./Data/data.csv"
 steps = 10 # steps to take in range
 
 # Set the pin addressing in the code to the pin numbers on the board
 GPIO.setmode(GPIO.BOARD)
+
+# Set the ADC up
+def get_smbus():
+    candidates = []
+    prefix = '/dev/i2c-'
+    for bus in glob.glob(prefix + '*'):
+        try:
+            n = int(bus.replace(prefix, ''))
+            candidates.append(n)
+        except:
+            pass
+        
+    if len(candidates) == 1:
+        return smbus.SMBus(candidates[0])
+    elif len(candidates) == 0:
+        raise Exception("Could not find an I2C bus")
+    else:
+        raise Exception("Multiple I2C busses found")
+
+bus = get_smbus()
+
+# Set the ADC channels
+ADC_Px_in = MCP342x(bus, 0x68, channel=0, resolution=14, gain=1)
+ADC_Py_in = MCP342x(bus, 0x68, channel=1, resolution=14, gain=1)
 
 # Create PWM Pin objects
 pwm_pins = []
