@@ -39,7 +39,7 @@ class PWM_Pin:
         newV = self.voltage_cavity + dV
         self.setV_out(newV)
     
-    def __init__(self, pinBoard, pinCavity=0, voltage_cavity=0, PWM_Freq=200):
+    def __init__(self, pinBoard, pinCavity=0, voltage_cavity=0, PWM_Freq=490): # Use Arduino UNO PWM frequency by default
         self.maxV = 5.0
         self.minV = 0.0
         GPIO.setmode(GPIO.BOARD)

@@ -77,17 +77,17 @@ data = pd.DataFrame({'Voltage_0':[], 'Voltage_1':[],'Voltage_2':[],'Voltage_3':[
 
 print("\nPress Ctl C to quit \n")  # Print blank line before and after message.
 
-# Functino to get the power readings from the cavity
+# Function to get the power readings from the cavity
 def read_powers(tolerance, samples, max_conversions=0, delay=0):
   i=0 # Conversions counter
   while i < max_conversions and max_conversions != 0:
     time.sleep(delay)
     p_x, p_y = MCP342x.convert_and_read_many(adcs, samples=samples)
     if np.abs(np.max(p_x) - np.min(p_x)) < 2.0*tolerance and np.abs(np.max(p_y) - np.min(p_y)) < 2.0*tolerance:
-      return [np.average(p_x), np.average(p_x)]
+      return [np.average(p_x), np.average(p_y)]
     i = i+1
   
-  return np.nan() # If we reached max conversions with no success
+  return [np.nan(), np.nan()] # If we reached max conversions with no success
 
 def add_data(p_x, p_y):
   V_0 = pin_table['Pins'][0].getCavityVoltage()
@@ -95,7 +95,7 @@ def add_data(p_x, p_y):
   V_2 = pin_table['Pins'][2].getCavityVoltage()
   V_3 = pin_table['Pins'][3].getCavityVoltage()
   S1 = (p_x-p_y)/(p_x+p_y)
-  row = {'Voltage_0':[V_0], 'Voltage_1':[V_1],'Voltage_2':[V_2],'Voltage_3':[V_3],'P_x':[p_x],'P_y':[p_y],'S1':[S1]}
+  row = {'Voltage_0':[V_0], 'Voltage_1':[V_1], 'Voltage_2':[V_2], 'Voltage_3':[V_3], 'P_x':[p_x], 'P_y':[p_y], 'S1':[S1]}
   newRow = pd.DataFrame(row)
   return newRow
 
@@ -116,12 +116,14 @@ try:
   onPins = pin_table[pin_table['Enable']].index
   ptr = len(onPins)
   while True:
-    pin_table['Pins'][ptr].setV_out(1)
+    # Increment the output voltage
+    increment_voltage(onPins, ptr)
     # Read the ADC input
     p_x, p_y = read_powers(0.01, 20, 100)
-    data = pd.concat([data, add_data(p_x, p_y)])
-    break
-
+    if p_x == np.nan(): break; # We've reached the end of the sweep range
+    data = pd.concat([data, add_data(p_x, p_y)]) # Append data point
+    
+  # Dump to csv file for post processing
   data.to_csv('./Data/CavityData_' + datetime.now() + '.csv')
 
 except KeyboardInterrupt:
