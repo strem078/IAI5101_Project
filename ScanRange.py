@@ -55,6 +55,10 @@ for pin in [12, 32, 33, 35]:
   pwm_pins.append(PWMPin.PWM_Pin(pin))
   pwm_pins[-1].setCavityPin(len(pwm_pins))
 
+# Set starting voltages
+start_voltages_cavity = [0, 0, 0, 0]
+for pin in range(0,len(pwm_pins)): pwm_pins[pin].setV_out(start_voltages_cavity[pin])
+
 pin_table=pd.DataFrame({'Pins' : pwm_pins, 'Enable' : [True, False, False, False]})
 print(pin_table)
 
