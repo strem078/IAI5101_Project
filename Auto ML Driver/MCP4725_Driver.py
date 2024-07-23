@@ -7,6 +7,8 @@ import smbus
 from MCP342x import MCP342x
 import numpy as np
 
+import Channel_Encoder
+
 def get_smbus():
     candidates = []
     prefix = '/dev/i2c-'
@@ -27,10 +29,10 @@ def get_smbus():
 
 class Auto_Ml:
 
-	def __init__(self):
+	def __init__(self, voltages, precision):
 		self.MCP_translators_out_enable = [4, 5]
 		self.MCP_chan_sel = [22, 17, 27, 18]
-
+		self.EPC = Channel_Encoder.EPC_Voltages(v=voltages, precision=precision)
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setwarnings(False)
 		
